@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>KDK Movies - Premium Streaming</title>
+<style>
+  /* =========================================
+     1. GLOBAL STYLES & TV FOCUS ENGINE
+     ========================================= */
+  :root {
+    --bg-main: #060608;
+    --bg-card: #16181d;
+    --accent-red: #e50914;
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-stack);
+    overflow-x: hidden;
+  }
+
+  a { text-decoration: none; color: inherit; }
+  button { cursor: pointer; font-family: inherit; border: none; }
+  li { list-style: none; }
+
+  /* --- CONTINUOUS RED GLOW FOR TV REMOTES --- */
+  .focusable { 
+      outline: none; 
+      transition: transform 0.3s ease, border 0.3s ease, box-shadow 0.3s ease; 
+      border: 2px solid transparent;
+      border-radius: 8px;
+  }
+  
+  @keyframes tv-red-glow {
+      0% { box-shadow: 0 0 15px rgba(229, 9, 20, 0.6), 0 0 0 3px rgba(229, 9, 20, 0.8); }
+      50% { box-shadow: 0 0 35px rgba(229, 9, 20, 1), 0 0 0 5px rgba(229, 9, 20, 1); }
+      100% { box-shadow: 0 0 15px rgba(229, 9, 20, 0.6), 0 0 0 3px rgba(229, 9, 20, 0.8); }
+  }
+
+  .focusable:focus, .focusable:hover {
+      transform: scale(1.05);
+      z-index: 50;
+      border-color: #fff;
+      animation: tv-red-glow 1.5s infinite ease-in-out;
+  }
+
+  /* =========================================
+     2. NAVBAR & SEARCH
+     ========================================= */
+  .navbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 50px; background-color: rgba(6, 6, 8, 0.95);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .logo-container { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; }
+  .logo-container img { height: 40px; object-fit: contain; }
+  
+  .nav-links { display: flex; gap: 25px; font-size: 0.95rem; color: var(--text-muted); align-items: center; font-weight: 600;}
+  .nav-links li { cursor: pointer; transition: color 0.2s; padding: 8px 12px; border-bottom: 2px solid transparent; border-radius: 6px; }
+  .nav-links li.active { color: var(--text-main); border-bottom: 2px solid var(--accent-red); }
+  
+  .nav-actions { display: flex; align-items: center; width: auto; }
+  .search-bar {
+    background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
+    color: white; padding: 10px 20px; border-radius: 25px; outline: none;
+    font-size: 0.95rem; transition: 0.3s; width: 250px;
+  }
+  .search-bar:focus { background: rgba(255,255,255,0.15); }
+
+  /* =========================================
+     3. BROWSE VIEW (GRID & CARDS)
+     ========================================= */
+  .container { max-width: 1400px; margin: 0 auto; padding: 40px 50px; }
+  .page-header { margin-bottom: 30px; }
+  .page-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; text-transform: capitalize; }
+  .page-subtitle { color: var(--text-muted); font-size: 0.9rem; }
+
+  /* Dynamic Responsive Grid for TV & Mobile */
+  .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+
+  @keyframes autoFlip {
+    0%, 30% { transform: rotateY(0deg); }
+    50%, 80% { transform: rotateY(180deg); }
+    100% { transform: rotateY(360deg); }
+  }
+
+  .movie-card { perspective: 1200px; height: 270px; width: 100%; cursor: pointer; margin-bottom: 50px; }
+  .poster-inner {
+    position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
+    animation: autoFlip 16s infinite cubic-bezier(0.4, 0.2, 0.2, 1);
+    border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  }
+  .poster-front, .poster-back {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; border-radius: 8px; overflow: hidden; background: var(--bg-card);
+  }
+  .poster-front img { width: 100%; height: 100%; object-fit: cover; }
+  
+  .badge {
+    position: absolute; top: 8px; left: 8px; background-color: var(--accent-red); color: white;
+    font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; letter-spacing: 0.5px; z-index: 2;
+    text-transform: uppercase;
+  }
+  
+  .card-info { margin-top: 12px; padding: 0 5px; }
+  .card-title { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+  .card-year { font-size: 0.8rem; color: var(--text-muted); }
+
+  .poster-back {
+    transform: rotateY(180deg); 
+    background: 
+      linear-gradient(rgba(10, 10, 12, 0.85), rgba(10, 10, 12, 0.85)),
+      url('https://i.ibb.co/qY3S366s/Gemini-Generated-Image-qzjufaqzjufaqzju.png') center / 80% no-repeat,
+      #060608;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 1px solid #2a2d35; padding: 15px; text-align: center;
+  }
+  .poster-back h3 { margin-bottom: 10px; font-size: 1.1rem; color: #fff; z-index: 2;}
+  .poster-back .detail { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 5px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; width: 90%; z-index: 2;}
+
+  /* =========================================
+     4. DETAIL VIEW & RECOMMENDATIONS
+     ========================================= */
+  #detail-view { display: none; padding-bottom: 80px; position: relative; }
+  
+  .hero-section {
+    position: relative; width: 100%; height: 80vh; min-height: 600px;
+    background-size: cover; background-position: center 20%; display: flex; align-items: center;
+  }
+  .hero-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to right, rgba(6,6,8,1) 0%, rgba(6,6,8,0.7) 50%, rgba(6,6,8,0) 100%),
+                linear-gradient(to top, rgba(6,6,8,1) 0%, rgba(6,6,8,0) 40%);
+  }
+
+  .close-detail-btn {
+    position: absolute; top: 30px; right: 40px; width: 50px; height: 50px;
+    background: rgba(0,0,0,0.6); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+    font-size: 1.4rem; display: flex; align-items: center; justify-content: center;
+    z-index: 50; backdrop-filter: blur(5px);
+  }
+  
+  .hero-content { position: relative; z-index: 2; max-width: 800px; padding: 0 50px; width: 100%; }
+  .hero-title { font-size: 4rem; font-weight: 900; line-height: 1.1; margin-bottom: 15px; letter-spacing: -1px;}
+  .hero-meta { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;}
+  .hero-meta span::after { content: '•'; margin-left: 15px; }
+  .hero-meta span:last-child::after { content: ''; }
+  .hero-desc { color: #d1d5db; line-height: 1.6; font-size: 1.05rem; margin-bottom: 40px; max-width: 90%;}
+
+  .hero-actions { display: flex; gap: 15px; }
+  .btn { padding: 14px 35px; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+  .btn-primary { background: var(--text-main); color: #000; }
+
+  /* =========================================
+     5. VIDEO PLAYER
+     ========================================= */
+  #video-container {
+    display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 100; background: #000;
+  }
+  #video-container video, #video-container iframe {
+    width: 100%; height: 100%; border: none; outline: none;
+  }
+
+  @keyframes continuousFlip {
+    0% { transform: perspective(400px) rotateY(0deg); }
+    100% { transform: perspective(400px) rotateY(360deg); }
+  }
+  
+  .player-watermark {
+    position: absolute; top: 25px; right: 35px; height: 55px; opacity: 0.85;
+    pointer-events: none; z-index: 9999; filter: drop-shadow(0px 2px 8px rgba(0,0,0,0.9));
+    animation: continuousFlip 4s infinite linear; transform-style: preserve-3d;
+  }
+
+  .close-video-btn {
+    position: absolute; top: 25px; left: 35px; background: rgba(0,0,0,0.7); color: #fff; 
+    border: 2px solid rgba(255,255,255,0.3); padding: 12px 25px; border-radius: 8px; font-weight: bold; 
+    z-index: 9999; backdrop-filter: blur(5px);
+  }
+
+  /* =========================================
+     6. SUB-SECTIONS (ACTORS & RECOMMENDATIONS)
+     ========================================= */
+  .section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; border-left: 3px solid var(--accent-red); padding-left: 10px; }
+  .detail-section { padding: 0 50px; margin-top: 40px; }
+  .loading-msg { text-align: center; color: var(--text-main); font-size: 1.2rem; margin-top: 50px; padding: 20px;}
+
+  .actors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;}
+  .actor-card {
+    background-color: var(--bg-card); display: flex; align-items: center; gap: 12px;
+    padding: 10px; border-radius: 8px; border: 1px solid #2a2d35;
+  }
+  .actor-initial { 
+    width: 40px; height: 40px; border-radius: 50%; background: #333; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;
+  }
+  .actor-info { display: flex; flex-direction: column; }
+  .actor-name { font-size: 0.85rem; font-weight: 600; color: #fff;}
+  .actor-role { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* Horizontal Scroll for Recommendations (JioTV / Netflix Style) */
+  .recommendations-row {
+    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 20px;
+    scrollbar-width: none; /* Firefox */
+    scroll-behavior: smooth;
+  }
+  .recommendations-row::-webkit-scrollbar { display: none; } /* Chrome */
+  
+  .recommendations-row > div {
+    flex: 0 0 auto; width: 170px; 
+  }
+  .recommendations-row .movie-card {
+    height: 250px; margin-bottom: 10px;
+  }
+
+  /* =========================================
+     7. RESPONSIVE DESIGN (MOBILE & TV)
+     ========================================= */
+  @media (max-width: 900px) {
+    .movie-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+    .movie-card { height: 210px; margin-bottom: 40px; }
+    .navbar { flex-direction: column; padding: 15px 20px; gap: 15px; }
+    .nav-actions, .search-bar { width: 100%; }
+    .container { padding: 30px 20px; }
+    .hero-title { font-size: 3rem; }
+    .hero-content { padding: 0 20px; }
+    .detail-section { padding: 0 20px; }
+    .recommendations-row > div { width: 140px; }
+    .recommendations-row .movie-card { height: 210px; }
+  }
+
+  @media (max-width: 480px) {
+    .movie-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+    .movie-card { height: 165px; margin-bottom: 30px; }
+    .hero-title { font-size: 2.2rem; }
+    .hero-meta { font-size: 0.85rem; }
+    .btn { padding: 10px 20px; font-size: 1rem; width: 100%; justify-content: center; }
+    .hero-section { min-height: 450px; height: 60vh; }
+    .close-detail-btn { top: 15px; right: 15px; width: 40px; height: 40px; }
+    .close-video-btn { top: 15px; left: 15px; padding: 10px 15px; }
+    .recommendations-row > div { width: 110px; }
+    .recommendations-row .movie-card { height: 165px; }
+  }
+</style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="logo-container focusable" tabindex="0" onclick="filterCategory('All', 'nav-all')" id="top-logo">
+      <img src="https://i.ibb.co/qY3S366s/Gemini-Generated-Image-qzjufaqzjufaqzju.png" alt="KDK Logo">
+    </div>
+    <ul class="nav-links">
+      <li class="focusable active" tabindex="0" id="nav-all" onclick="filterCategory('All', 'nav-all')">Library</li>
+      <li class="focusable" tabindex="0" id="nav-movies" onclick="filterCategory('Movie', 'nav-movies')">KDK Movies</li>
+      <li class="focusable" tabindex="0" id="nav-series" onclick="filterCategory('Series', 'nav-series')">KDK Series</li>
+    </ul>
+    
+    <div class="nav-actions">
+      <input type="text" id="searchInput" class="search-bar focusable" tabindex="0" placeholder="Search titles, genre..." oninput="handleSearch()">
+    </div>
+  </nav>
+
+  <main id="browse-view" class="container">
+    <div class="page-header">
+      <h1 class="page-title" id="main-title">KDK Library</h1>
+      <p class="page-subtitle" id="library-count">Loading titles...</p>
+    </div>
+
+    <div id="loading" class="loading-msg">Connecting to Live Databases...</div>
+    <div class="movie-grid" id="main-grid"></div>
+  </main>
+
+  <main id="detail-view">
+    <div class="hero-section" id="hero-bg" style="background-image: url('');">
+      <div class="hero-overlay"></div>
+      <button class="close-detail-btn focusable" tabindex="0" onclick="showBrowse()" title="Back to Home" id="btn-close-detail">✖</button>
+      
+      <div class="hero-content" id="hero-content-inner">
+        <h1 class="hero-title" id="hero-title">Title</h1>
+        <div class="hero-meta" id="hero-meta"></div>
+        <p class="hero-desc" id="hero-desc">Description goes here.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary focusable" tabindex="0" id="btn-play" onclick="playVideo()">▶ Play Now</button>
+        </div>
+      </div>
+
+      <div id="video-container"></div>
+    </div>
+
+    <div class="detail-section" id="actors-section-container">
+      <h3 class="section-title">Cast</h3>
+      <div class="actors-grid" id="actors-list"></div>
+    </div>
+
+    <!-- NEW RECOMMENDATIONS SECTION -->
+    <div class="detail-section" id="recommendations-container" style="margin-top: 10px; margin-bottom: 40px;">
+      <h3 class="section-title">More Like This</h3>
+      <div class="recommendations-row" id="recommendations-list"></div>
+    </div>
+
+  </main>
+
+<script>
+  // ==========================================
+  // 1. DUAL GOOGLE SHEETS & APP LOGIC
+  // ==========================================
+  
+  const MASTER_SHEET_ID = '1WNVjP_UUchqeNCC1-heAe_H-JhwMEP8uhUyPo4oqFm0';
+  const movieUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:json&sheet=KDK%20MOVIES`;
+  const seriesUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:json&sheet=KDK%20SERIES`;
+
+  let kdkDatabase = [];
+  let currentActiveMovie = null;
+
+  const browseView = document.getElementById('browse-view');
+  const detailView = document.getElementById('detail-view');
+  const mainGrid = document.getElementById('main-grid');
+  const loadingMsg = document.getElementById('loading');
+  const countMsg = document.getElementById('library-count');
+  const heroContentInner = document.getElementById('hero-content-inner');
+  const videoContainer = document.getElementById('video-container');
+  const searchInput = document.getElementById('searchInput');
+  const actorsList = document.getElementById('actors-list');
+  const actorsSectionContainer = document.getElementById('actors-section-container');
+  const recommendationsContainer = document.getElementById('recommendations-container');
+  const recommendationsList = document.getElementById('recommendations-list');
+  const mainTitle = document.getElementById('main-title');
+
+  // --- CONDITIONAL PARSER DETECTING TABS ENGINE ---
+  function parseSheetData(text, sourceCategory) {
+    if (!text) return [];
+    try {
+      const jsonString = text.substring(47).slice(0, -2);
+      const json = JSON.parse(jsonString);
+      
+      if (!json || !json.table || !json.table.rows) return [];
+      
+      let rows = json.table.rows;
+      
+      // Remove header row if it exists
+      if(rows.length > 0 && rows[0].c[0]) {
+        const firstCell = rows[0].c[0].v.toString().toLowerCase();
+        if (firstCell.includes('name') || firstCell.includes('title')) {
+          rows.shift(); 
+        }
+      }
+      
+      return rows.map((row) => {
+        if (sourceCategory === 'Series') {
+          const titleVal = row.c[0] ? row.c[0].v.toString() : 'Unknown Title';
+          const yearVal = row.c[1] ? row.c[1].v.toString() : '';
+          const genreVal = row.c[2] ? row.c[2].v.toString() : 'Various';
+          const qualityVal = row.c[3] ? row.c[3].v.toString() : 'HD';
+          const videoLinkVal = row.c[4] ? row.c[4].v.toString() : '#';
+          const partVal = row.c[5] ? row.c[5].v.toString() : '';
+          const posterVal = row.c[6] ? row.c[6].v.toString() : 'https://via.placeholder.com/400x600?text=No+Poster';
+          const seriesTagVal = row.c[7] ? row.c[7].v.toString() : 'Series';
+
+          const badgeLabel = partVal ? `${seriesTagVal} - ${partVal}` : seriesTagVal;
+
+          return {
+            title: titleVal,
+            contentType: badgeLabel,
+            genre: `${genreVal} (${yearVal})`,
+            poster: posterVal,
+            synopsis: `${genreVal} • Quality: ${qualityVal} ${yearVal ? '• ' + yearVal : ''}`,
+            videoLink: videoLinkVal,
+            actors: '', 
+            category: sourceCategory 
+          };
+        } else {
+          const titleVal = row.c[0] ? row.c[0].v.toString() : 'Unknown Title';
+          const posterVal = row.c[1] ? row.c[1].v.toString() : 'https://via.placeholder.com/400x600?text=No+Poster';
+          const videoLinkVal = row.c[2] ? row.c[2].v.toString() : '#';
+          const actorsVal = row.c[3] ? row.c[3].v.toString() : '';
+          const detailsVal = row.c[4] ? row.c[4].v.toString() : 'No description available.';
+          const contentTypeVal = row.c[5] ? row.c[5].v.toString() : sourceCategory;
+
+          return {
+            title: titleVal,
+            contentType: contentTypeVal,
+            genre: detailsVal,
+            poster: posterVal,
+            synopsis: detailsVal,
+            videoLink: videoLinkVal,
+            actors: actorsVal,
+            category: sourceCategory 
+          };
+        }
+      });
+    } catch (e) {
+      console.error(`Error parsing sheet for ${sourceCategory}:`, e);
+      return [];
+    }
+  }
+
+  Promise.all([
+    fetch(movieUrl).then(res => res.text()).catch(e => null),
+    fetch(seriesUrl).then(res => res.text()).catch(e => null)
+  ]).then(([moviesText, seriesText]) => {
+    
+    const moviesData = parseSheetData(moviesText, 'Movie');
+    const seriesData = parseSheetData(seriesText, 'Series');
+
+    kdkDatabase = [...moviesData, ...seriesData];
+    kdkDatabase.forEach((item, index) => item.id = index);
+
+    if (kdkDatabase.length === 0) {
+      loadingMsg.innerText = "Error: Cannot find tabs named 'KDK MOVIES' or 'KDK SERIES' in your Google Sheet.";
+    } else {
+      loadingMsg.style.display = 'none';
+      countMsg.innerText = `${kdkDatabase.length} total titles available`;
+      buildGrid(kdkDatabase); 
+      setTimeout(() => document.getElementById('top-logo').focus(), 500);
+    }
+
+  }).catch(err => {
+    loadingMsg.innerText = "Error loading database. Ensure your Google Sheet is shared as 'Anyone with the link'.";
+  });
+
+
+  // --- NAVIGATION TAB FILTERING ---
+  function filterCategory(category, navId) {
+    document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+    if (navId) document.getElementById(navId).classList.add('active');
+
+    searchInput.value = ''; 
+
+    if (category === 'All') {
+      mainTitle.innerText = "KDK Library";
+      buildGrid(kdkDatabase);
+    } else {
+      mainTitle.innerText = category === 'Movie' ? 'KDK Movies' : 'KDK Series';
+      const filtered = kdkDatabase.filter(item => item.category === category);
+      buildGrid(filtered);
+    }
+    showBrowse(); 
+  }
+
+  // --- SEARCH BAR FILTERING ---
+  function handleSearch() {
+    const query = searchInput.value.toLowerCase().trim();
+    const activeTab = document.querySelector('.nav-links li.active').id;
+    let poolToSearch = kdkDatabase;
+    
+    if (activeTab === 'nav-movies') {
+      poolToSearch = kdkDatabase.filter(item => item.category === 'Movie');
+    } else if (activeTab === 'nav-series') {
+      poolToSearch = kdkDatabase.filter(item => item.category === 'Series');
+    }
+
+    if (query === "") {
+      buildGrid(poolToSearch);
+      return;
+    }
+    
+    const filteredItems = poolToSearch.filter(item => 
+      item.title.toLowerCase().includes(query) || 
+      item.genre.toLowerCase().includes(query) ||
+      item.contentType.toLowerCase().includes(query)
+    );
+    buildGrid(filteredItems);
+  }
+
+  function buildGrid(dataArray) {
+    if (dataArray.length === 0) {
+      mainGrid.innerHTML = `<h3 style="grid-column: 1/-1; text-align: left; color: var(--text-muted);">No titles found.</h3>`;
+    } else {
+      mainGrid.innerHTML = dataArray.map(item => createCardHTML(item)).join('');
+    }
+  }
+
+  function createCardHTML(item) {
+    const randomDelay = (Math.random() * 5).toFixed(1) + 's';
+    return `
+      <div>
+        <div class="movie-card focusable" tabindex="0" onclick="showDetail(${item.id})">
+          <div class="poster-inner" style="animation-delay: ${randomDelay}">
+            <div class="poster-front">
+              <span class="badge">${item.contentType}</span>
+              <img src="${item.poster}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x600?text=Poster'">
+            </div>
+            <div class="poster-back">
+              <h3>${item.title}</h3>
+              <div class="detail">${item.contentType}</div>
+              <button class="play-btn-small">DETAILS</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">${item.title}</div>
+          <div class="card-year">${item.contentType}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showDetail(id) {
+    const item = kdkDatabase.find(m => m.id === id);
+    if(!item) return;
+    
+    currentActiveMovie = item;
+    closeVideo();
+
+    document.getElementById('hero-bg').style.backgroundImage = `url('${item.poster}')`;
+    document.getElementById('hero-title').innerText = item.title;
+    document.getElementById('hero-meta').innerHTML = `<span>${item.contentType}</span>`;
+    document.getElementById('hero-desc').innerText = item.synopsis;
+
+    // Load Actors
+    if (item.actors && item.actors.trim() !== '') {
+      const actorArray = item.actors.split(',');
+      actorsList.innerHTML = actorArray.map(actorName => {
+        const name = actorName.trim();
+        const initials = name.substring(0, 2).toUpperCase(); 
+        return `
+          <div class="actor-card">
+            <div class="actor-initial">${initials}</div>
+            <div class="actor-info">
+              <span class="actor-name">${name}</span>
+              <span class="actor-role">Cast</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      actorsSectionContainer.style.display = 'block'; 
+    } else {
+      actorsSectionContainer.style.display = 'none'; 
+    }
+
+    // Load Recommendations (More Like This)
+    // Find items in same category, exclude current, shuffle, grab 10 max
+    let recs = kdkDatabase.filter(m => m.id !== id && m.category === item.category);
+    recs = recs.sort(() => 0.5 - Math.random()).slice(0, 10);
+
+    if (recs.length > 0) {
+      recommendationsList.innerHTML = recs.map(rec => {
+        const randomDelay = (Math.random() * 5).toFixed(1) + 's';
+        return `
+          <div>
+            <div class="movie-card focusable" tabindex="0" onclick="showDetail(${rec.id})">
+              <div class="poster-inner" style="animation-delay: ${randomDelay}">
+                <div class="poster-front">
+                  <span class="badge" style="font-size: 0.55rem; padding: 3px 5px;">${rec.contentType}</span>
+                  <img src="${rec.poster}" alt="${rec.title}" onerror="this.src='https://via.placeholder.com/400x600?text=Poster'">
+                </div>
+                <div class="poster-back">
+                  <h3 style="font-size: 0.9rem;">${rec.title}</h3>
+                </div>
+              </div>
+            </div>
+            <div class="card-info">
+              <div class="card-title" style="font-size: 0.85rem;">${rec.title}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      recommendationsContainer.style.display = 'block';
+    } else {
+      recommendationsContainer.style.display = 'none';
+    }
+    
+    browseView.style.display = 'none';
+    detailView.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    setTimeout(() => { document.getElementById('btn-play').focus(); }, 100);
+  }
+
+  function showBrowse() {
+    closeVideo();
+    detailView.style.display = 'none';
+    browseView.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    setTimeout(() => { document.querySelector('.nav-links li.active').focus(); }, 100);
+  }
+
+  function playVideo() {
+    if (currentActiveMovie && currentActiveMovie.videoLink && currentActiveMovie.videoLink !== '#') {
+      let videoUrl = currentActiveMovie.videoLink.trim();
+      let playerElement = '';
+      
+      const logoOverlay = `<img src="https://i.ibb.co/qY3S366s/Gemini-Generated-Image-qzjufaqzjufaqzju.png" class="player-watermark" alt="KDK Watermark">`;
+      const backButton = `<button class="close-video-btn focusable" tabindex="0" id="btn-close-video" onclick="closeVideo()">← Back to Details</button>`;
+
+      if (videoUrl.toLowerCase().endsWith('.mp4')) {
+        playerElement = `
+          <video controls autoplay style="width: 100%; height: 100%; object-fit: contain;">
+            <source src="${videoUrl}" type="video/mp4">
+          </video>`;
+      } else if (videoUrl.includes('drive.google.com')) {
+        const driveRegex = /\/d\/([a-zA-Z0-9_-]+)/;
+        const match = videoUrl.match(driveRegex);
+        let embedUrl = match && match[1] ? `https://drive.google.com/file/d/${match[1]}/preview` : videoUrl;
+        playerElement = `<iframe src="${embedUrl}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+      } else {
+        playerElement = `<iframe src="${videoUrl}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+      }
+
+      heroContentInner.style.display = 'none';
+      videoContainer.style.display = 'block';
+      
+      videoContainer.innerHTML = `
+        ${backButton}
+        ${logoOverlay}
+        ${playerElement}
+      `;
+      
+      document.querySelector('.close-detail-btn').style.display = 'none';
+      setTimeout(() => { document.getElementById('btn-close-video').focus(); }, 100);
+
+    } else {
+      alert("No video link is provided for this title.");
+    }
+  }
+
+  function closeVideo() {
+    videoContainer.style.display = 'none';
+    videoContainer.innerHTML = ''; 
+    heroContentInner.style.display = 'block';
+    
+    const detailCrossBtn = document.querySelector('.close-detail-btn');
+    if(detailCrossBtn) detailCrossBtn.style.display = 'flex';
+
+    setTimeout(() => { document.getElementById('btn-play').focus(); }, 100);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+        document.activeElement.click();
+        e.preventDefault();
+      }
+    } 
+    else if (e.key === 'Escape' || e.key === 'Backspace') {
+      if (videoContainer.style.display === 'block') {
+        closeVideo();
+      } else if (detailView.style.display === 'block') {
+        showBrowse();
+      }
+      e.preventDefault();
+    }
+  });
+
+</script>
+
+</body>
+</html>

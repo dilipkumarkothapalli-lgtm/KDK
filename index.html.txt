@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="referrer" content="no-referrer">
+    <title>KDK Entertainment | Home Isolated TV & Mobile</title>
+    
+    <link href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-red: #ff0015; --jio-blue: #0063e5; --ipl-gold: #f0b90b; --bg-dark: #030b17;
+            --primary-green: #00ff88; --glow: 0 0 35px var(--jio-blue);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body, html { height: 100%; width: 100%; font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: #ffffff; overflow: hidden; display: flex; }
+        ::-webkit-scrollbar { display: none; }
+        
+        /* Focus state mapping for TV Remotes */
+        .focusable { cursor: pointer; transition: all 0.3s ease-in-out; border: 3px solid transparent; outline: none; }
+        .focusable:focus, .focusable:hover { transform: scale(1.05); box-shadow: var(--glow); border-color: #fff; z-index: 50; }
+
+        /* Main Layout */
+        .main-content { flex: 1; height: 100vh; overflow-y: auto; scroll-behavior: smooth; position: relative; padding-bottom: 80px; }
+        .view-panel { min-height: 100vh; padding-top: 20px; padding-bottom: 100px; width: 100%; display: block; }
+
+        /* Home View Styles */
+        .hero-banner { width: 92%; margin: 20px 4% 10px; height: 45vh; border-radius: 20px; overflow: hidden; position: relative; cursor: pointer; }
+        .hero-img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; transition: opacity 0.5s; }
+        .hero-gradient { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3,11,23,0.95) 0%, rgba(3,11,23,0.4) 60%, transparent 100%); z-index: 2; pointer-events: none; }
+        .hero-content { position: absolute; bottom: 12%; left: 5%; z-index: 10; pointer-events: none; transition: 0.3s; }
+        
+        .badge-live { background: var(--primary-red); color: #fff; box-shadow: 0 0 20px var(--primary-red); animation: pulse-red 2s infinite; padding: 6px 18px; border-radius: 4px; font-weight: 900; font-size: 14px; margin-bottom: 10px; display: inline-block; }
+        .hero-badge { padding: 6px 18px; border-radius: 4px; font-weight: 900; font-size: 14px; margin-bottom: 10px; display: inline-block; }
+        
+        .watch-btn { background: var(--jio-blue); color: #fff; border: none; padding: 12px 35px; border-radius: 8px; font-weight: 900; font-size: 18px; text-transform: uppercase; margin-top: 15px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(0, 99, 229, 0.5); cursor: pointer; pointer-events: auto; border: 3px solid transparent; transition: 0.3s; outline: none; }
+        .watch-btn:focus, .watch-btn:hover { background: #fff; color: var(--jio-blue); transform: scale(1.1); box-shadow: 0 0 35px #fff; border-color: white;}
+        
+        .hero-cricapi-overlay { position: absolute; bottom: 8%; left: 5%; z-index: 10; display: none; flex-direction: column; align-items: flex-start; }
+        .cricapi-scoreboard { display: flex; align-items: center; gap: 25px; background: rgba(0,0,0,0.7); padding: 15px 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        .team-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .team-block img { width: 65px; height: 60px; object-fit: contain; }
+        .score-block h1 { font-size: 38px; font-weight: 900; color: var(--ipl-gold); margin-bottom: 5px; line-height: 1; text-align: center; }
+        
+        /* Network Cards (OTT Hub) */
+        .network-card { min-width: 180px; height: 100px; background: #1a1a1a; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; border: 3px solid transparent; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; overflow: hidden; cursor: pointer; outline: none; }
+        .network-card:focus, .network-card:hover { border-color: #fff; box-shadow: 0 0 25px var(--primary-green); transform: scale(1.05); }
+
+        .fantasy-banner { width: 92%; margin: 10px 4% 20px; height: 10%; min-height: 80px; background: linear-gradient(90deg, #16181f, #2a0845); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border: 3px solid transparent; box-shadow: 0 10px 20px rgba(0,0,0,0.5); outline: none;}
+        .fantasy-banner:focus, .fantasy-banner:hover { border-color: #fff; box-shadow: var(--glow); transform: scale(1.02); }
+        .join-badge { background: var(--ipl-gold); color: #000; padding: 10px 25px; border-radius: 30px; font-weight: 900; border: 2px solid transparent; outline:none;}
+        .join-badge:focus { border-color: #fff; transform: scale(1.1); }
+        
+        .row-header { padding: 10px 4% 5px; font-weight: 900; font-size: 24px; text-transform: uppercase; }
+        
+        /* Horizontal Scroll Rows */
+        .scroll-row { display: flex; gap: 20px; overflow-x: auto; padding: 15px 4% 40px 4%; scroll-behavior: smooth; }
+        .top10-container { padding-left: 60px; gap: 40px; } /* Special padding for Top 10 ranks */
+
+        /* Standard Movie Card (New & Genres) */
+        .standard-card { position: relative; width: 160px; height: 240px; flex-shrink: 0; border-radius: 12px; transition: 0.3s; background: #1a1a1a; cursor: pointer; border: 3px solid transparent; outline: none; overflow: hidden;}
+        .standard-card img { width: 100%; height: 100%; object-fit: cover; }
+        .standard-card:focus, .standard-card:hover { transform: scale(1.08); box-shadow: 0 0 30px var(--jio-blue); border-color: #ffffff; z-index: 50; }
+
+        /* Top 10 Specific Card */
+        .top10-card { position: relative; width: 220px; height: 320px; flex-shrink: 0; border-radius: 12px; transition: 0.3s; background: #1a1a1a; cursor: pointer; border: 3px solid transparent; outline: none;}
+        .top10-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; z-index: 5; position: relative; }
+        .top10-card:focus, .top10-card:hover { transform: scale(1.08); box-shadow: 0 0 35px var(--jio-blue); border-color: #ffffff; z-index: 50; }
+        
+        /* Continue Watching Card */
+        .continue-card { position: relative; width: 280px; height: 157px; flex-shrink: 0; border-radius: 12px; transition: 0.3s; background: #1a1a1a; cursor: pointer; border: 3px solid transparent; outline: none; overflow: hidden; }
+        .continue-card img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: 0.3s;}
+        .continue-card:focus img, .continue-card:hover img { opacity: 0.4; }
+        .continue-card:focus, .continue-card:hover { transform: scale(1.08); box-shadow: 0 0 30px var(--jio-blue); border-color: #ffffff; z-index: 50; }
+        .progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.2); z-index: 10;}
+        .progress-fill { height: 100%; background: var(--primary-red); border-radius: 0 4px 4px 0;}
+        .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 40px; color: white; opacity: 0; transition: 0.3s; z-index: 15; text-shadow: 0 0 20px black; }
+        .continue-card:focus .play-overlay, .continue-card:hover .play-overlay { opacity: 1; transform: scale(1.2); }
+        .continue-title { position: absolute; bottom: 15px; left: 15px; font-weight: 900; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); z-index: 10;}
+
+        /* Continuous Red Glow Animation for Rank Numbers */
+        @keyframes continuous-red-glow {
+            0% { -webkit-text-stroke: 3px rgba(255, 0, 21, 0.7); text-shadow: 0 0 10px rgba(255, 0, 21, 0.5); }
+            50% { -webkit-text-stroke: 3px rgba(255, 0, 21, 1); text-shadow: 0 0 25px rgba(255, 0, 21, 1), 0 0 45px rgba(255, 0, 21, 0.8); }
+            100% { -webkit-text-stroke: 3px rgba(255, 0, 21, 0.7); text-shadow: 0 0 10px rgba(255, 0, 21, 0.5); }
+        }
+
+        .rank-num { 
+            position: absolute; left: -45px; bottom: -15px; font-size: 150px; font-weight: 900; 
+            color: transparent; 
+            z-index: 1; pointer-events: none; 
+            animation: continuous-red-glow 1.5s infinite ease-in-out;
+        }
+        
+        /* Modal Styles */
+        .lang-modal { position: fixed; inset: 0; background: rgba(3, 11, 23, 0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .lang-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 30px; max-width: 800px; }
+        .lang-btn { background: #16181f; border: 3px solid var(--jio-blue); color: white; padding: 20px 40px; font-size: 22px; font-weight: 900; border-radius: 12px; transition: 0.3s; cursor: pointer; outline: none;}
+        .lang-btn:focus, .lang-btn:hover { background: var(--jio-blue); transform: scale(1.1); box-shadow: var(--glow); border-color: white; }
+        .close-lang { outline: none; border: 3px solid transparent; }
+        .close-lang:focus { border-color: white; transform: scale(1.1); }
+
+        #loader { position: fixed; inset: 0; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
+        .css-spinner { width: 60px; height: 60px; border: 4px solid rgba(0, 99, 229, 0.2); border-top-color: var(--jio-blue); border-radius: 50%; animation: spin 1s linear infinite; box-shadow: 0 0 30px rgba(0, 99, 229, 0.4); }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .top10-card { width: 160px; height: 240px; }
+            .hero-banner { height: auto; aspect-ratio: 16/9; }
+            .continue-card { width: 220px; height: 124px; }
+            .standard-card { width: 120px; height: 180px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="css-spinner"></div>
+        <h3 style="color:var(--jio-blue); margin-top:20px; font-weight:900; letter-spacing: 2px;">SYNCING ENGINE</h3>
+    </div>
+
+    <div id="langModal" class="lang-modal">
+        <button class="close-lang focusable" tabindex="0" onclick="closeLangSelector()" style="position: absolute; top: 30px; right: 40px; background: var(--primary-red); color: white; padding: 10px 25px; border-radius: 30px; font-weight: 900; cursor: pointer;">BACK</button>
+        <h1 style="color: var(--ipl-gold); font-size: 50px; font-weight: 900;">SELECT AUDIO TRACK</h1>
+        <div class="lang-grid" style="margin-top: 20px;">
+            <button class="lang-btn focusable" tabindex="0" onclick="launchAppCreatorIntent('TEL')">TELUGU</button>
+            <button class="lang-btn focusable" tabindex="0" onclick="launchAppCreatorIntent('TAM')">TAMIL</button>
+            <button class="lang-btn focusable" tabindex="0" onclick="launchAppCreatorIntent('HIN')">HINDI</button>
+            <button class="lang-btn focusable" tabindex="0" onclick="launchAppCreatorIntent('ENG')">ENGLISH</button>
+            <button class="lang-btn focusable" tabindex="0" onclick="launchAppCreatorIntent('KAN')">KANNADA</button>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div id="homeView" class="view-panel active-view">
+            <div class="hero-banner focusable" tabindex="0" id="heroBanner" onclick="heroClicked()" onkeydown="handleKey(event, this.onclick)">
+                <img id="heroImg" src="" class="hero-img">
+                <div class="hero-gradient"></div>
+                
+                <div class="hero-content" id="heroContent">
+                    <div id="heroBadge" class="hero-badge badge-watch" style="background:#8a2be2; color:white;">NOW STREAMING</div>
+                    <h1 id="heroTitle" style="font-size: 55px; font-weight: 900; line-height: 1.1;">...</h1>
+                    <button class="watch-btn focusable" tabindex="0" onclick="event.stopPropagation(); heroWatchClicked();"><i class="fa-solid fa-play"></i> WATCH NOW</button>
+                </div>
+
+                <div class="hero-cricapi-overlay" id="heroCricAPI">
+                    <div id="cricApiBadge" class="hero-badge badge-live" style="margin-bottom: 15px;">LIVE MATCH</div>
+                    <div class="cricapi-scoreboard">
+                        <div class="team-block"><img id="cricT1Logo" src=""><h2 id="cricT1Name" style="font-weight:900;"></h2></div>
+                        <div class="score-block"><h1 id="cricScore">LIVE</h1><p id="cricDetails" style="color:var(--primary-green); font-weight:bold;">TATA IPL 2026</p></div>
+                        <div class="team-block"><img id="cricT2Logo" src=""><h2 id="cricT2Name" style="font-weight:900;"></h2></div>
+                    </div>
+                    <button class="watch-btn focusable" tabindex="0" onclick="event.stopPropagation(); openLangSelector();"><i class="fa-solid fa-play"></i> WATCH LIVE</button>
+                </div>
+            </div>
+
+            <div class="row-header" style="margin-top: 20px;">Premium OTT Hub</div>
+            <div style="display: flex; gap: 20px; overflow-x: auto; padding: 15px 4% 25px 4%;">
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/jio/')"><span style="background:#0063e5; padding:8px 15px; border-radius:8px; box-shadow: 0 0 15px #0063e5;"><i class="fas fa-plus-circle"></i> Jio+</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/ott/playlist')"><span style="background:var(--primary-red); padding:8px 15px; border-radius:8px;"><i class="fas fa-user-cog"></i> Admin Hub</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/voot')"><span style="background:#5a2e8c; padding:8px 15px; border-radius:8px;">Voot</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/play')"><span style="background:#ed1a3b; padding:8px 15px; border-radius:8px;">Tata Play</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/sunnxt')"><span style="background:#f0b90b; color:#000; padding:8px 15px; border-radius:8px;">Sun NXT</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/discovery')"><span style="background:#00a3e0; padding:8px 15px; border-radius:8px;">Discovery</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/sony-liv')"><span style="background:#ff9900; color:#000; padding:8px 15px; border-radius:8px;">Sony Liv</span></div>
+                <div class="network-card focusable" tabindex="0" onclick="launchWebHub('https://hatstar.netlify.app/live/zee')"><span style="background:#8a2be2; padding:8px 15px; border-radius:8px;">Zee5</span></div>
+            </div>
+
+            <div class="fantasy-banner focusable" tabindex="0" onclick="alert('Routing to Fantasy App...')">
+                <div>
+                    <h2 style="font-weight:900; color: #fff; letter-spacing: 1px;">KDK11 FANTASY: PLAY TODAY</h2>
+                    <p style="color: #ccc; font-size: 14px; margin-top: 4px;">Join the ₹10 Crore Mega Pool for DC vs KKR.</p>
+                </div>
+                <div class="join-badge focusable" tabindex="0">JOIN NOW</div>
+            </div>
+
+            <div class="row-header">Trending Top 10</div>
+            <div class="scroll-row top10-container" id="top10Row"></div>
+
+            <!-- NEW SECTIONS ADDED HERE -->
+            <div class="row-header">Continue Watching</div>
+            <div class="scroll-row" id="continueWatchingRow"></div>
+
+            <div class="row-header">New on KDK-MOVIES</div>
+            <div class="scroll-row" id="newMoviesRow"></div>
+
+            <!-- Container for Auto-Generated Genre Rows -->
+            <div id="genresContainer"></div>
+
+        </div>
+    </main>
+
+    <script>
+        // Data & State Variables
+        let globalDynamicData = [];
+        let kdkMovieDatabase = [];
+        let currentHero = 0;
+        let rotationInterval;
+        let activeHeroStatus = "";
+
+        const TEAM_LOGOS = {
+            "MI": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Mumbai_Indians_Logo.svg/1200px-Mumbai_Indians_Logo.svg.png",
+            "KKR": "https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Kolkata_Knight_Riders_Logo.svg/1200px-Kolkata_Knight_Riders_Logo.svg.png",
+            "DC": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Delhi_Capitals_Logo.svg/1200px-Delhi_Capitals_Logo.svg.png",
+            "RCB": "https://upload.wikimedia.org/wikipedia/en/thumb/1/1a/Royal_Challengers_Bengaluru_Logo.svg/1200px-Royal_Challengers_Bengaluru_Logo.svg.png"
+        };
+
+        const HOME_SHEET = `https://docs.google.com/spreadsheets/d/1732-FKXDuaf15k544yzTYcnEyxrkVeouKpd6c24kI0U/gviz/tq?tqx=out:json`;
+        const MOVIE_SHEET = `https://docs.google.com/spreadsheets/d/1h6bk2gJukVMh6aWxWboBGcgBeQKL8-bhgNdpa9WMZCg/gviz/tq?tqx=out:json&sheet=KDK%20MOVIES`;
+
+        // Utility to help TV remotes trigger clicks
+        function handleKey(e, action) {
+            if(e.key === 'Enter') {
+                e.preventDefault();
+                if(action) action();
+                else e.target.click();
+            }
+        }
+
+        // Engine Boot System
+        async function bootSystem() {
+            const fetchHome = fetch(HOME_SHEET).then(r => r.text()).catch(e => null);
+            const fetchMovie = fetch(MOVIE_SHEET).then(r => r.text()).catch(e => null);
+
+            try {
+                const [textHome, textMovie] = await Promise.all([fetchHome, fetchMovie]);
+                
+                // Parse Home Slider Data
+                if(textHome) {
+                    const jsonHome = JSON.parse(textHome.substring(textHome.indexOf('{'), textHome.lastIndexOf('}') + 1));
+                    globalDynamicData = jsonHome.table.rows.map(row => ({
+                        img: row.c[0]?.v || '', title: row.c[1]?.v || 'Event', status: row.c[2]?.v?.toString().toLowerCase().trim() || 'movie'
+                    })).filter(item => item.img && item.title);
+                }
+
+                if(!globalDynamicData.find(m => m.status === 'live')) {
+                    globalDynamicData.unshift({ img: 'https://via.placeholder.com/1280x720/16181f/ffffff?text=DC+vs+KKR', title: 'DC vs KKR', status: 'live', score: 'DC 89/5 (10.5)' });
+                }
+
+                // Parse Movie Database
+                let mRows = [];
+                if(textMovie) {
+                    const jsonMovie = JSON.parse(textMovie.substring(textMovie.indexOf('{'), textMovie.lastIndexOf('}') + 1));
+                    mRows = jsonMovie.table.rows;
+                    if(mRows.length > 0 && mRows[0].c[0]?.v?.toString().toLowerCase() === 'title') mRows.shift();
+                }
+
+                let idCounter = 0;
+                kdkMovieDatabase = mRows.map(row => ({
+                    id: idCounter++, 
+                    title: row.c[0]?.v?.toString() || 'Unknown Title', 
+                    quality: row.c[3]?.v?.toString() || 'HD', 
+                    poster: row.c[4]?.v?.toString() || 'https://via.placeholder.com/400x600/16181f/ffffff?text=No+Poster',
+                    status: 'movie'
+                }));
+
+            } catch(e) {
+                if(globalDynamicData.length === 0) {
+                    globalDynamicData = [{ img: 'https://via.placeholder.com/1280x720/16181f/ffffff?text=DC+vs+KKR', title: 'DC vs KKR', status: 'live', score: 'DC 89/5 (10.5)' }];
+                }
+            }
+
+            // Fallback mock data to ensure the new sections look populated if sheet is empty
+            if (kdkMovieDatabase.length < 15) {
+                for (let i = kdkMovieDatabase.length; i < 20; i++) {
+                    kdkMovieDatabase.push({
+                        id: i, title: 'KDK Blockbuster ' + (i+1), quality: '4K', 
+                        poster: `https://via.placeholder.com/400x600/2a0845/ffffff?text=Movie+${i+1}`, 
+                        status: 'movie'
+                    });
+                }
+            }
+
+            initApp();
+        }
+
+        function initApp() {
+            updateHero();
+            buildTop10();
+            buildContinueWatching();
+            buildNewMovies();
+            buildGenres();
+            
+            // Hide Loader
+            const loader = document.getElementById('loader');
+            loader.style.opacity = '0';
+            setTimeout(() => { 
+                loader.style.display = 'none'; 
+                // Auto focus Hero Banner for TV remotes on load
+                document.getElementById('heroBanner').focus();
+            }, 400);
+
+            // Start Auto Rotation
+            if(rotationInterval) clearInterval(rotationInterval);
+            rotationInterval = setInterval(updateHero, 6000);
+        }
+
+        // Hero Banner Logic
+        function updateHero() {
+            let slides = globalDynamicData.filter(m => m.status === 'live' || m.status === 'upcoming');
+            if(slides.length === 0) slides = globalDynamicData;
+            
+            const slide = slides[currentHero % slides.length];
+            activeHeroStatus = slide.status;
+            document.getElementById('heroImg').src = slide.img;
+            
+            if(slide.status === 'live' || slide.status === 'upcoming') {
+                document.getElementById('heroContent').style.display = 'none';
+                document.getElementById('heroCricAPI').style.display = 'flex';
+                const teams = slide.title.match(/([A-Z]+)\s*vs\s*([A-Z]+)/i);
+                if(teams) {
+                    document.getElementById('cricT1Name').innerText = teams[1].toUpperCase();
+                    document.getElementById('cricT2Name').innerText = teams[2].toUpperCase();
+                    document.getElementById('cricT1Logo').src = TEAM_LOGOS[teams[1].toUpperCase()] || '';
+                    document.getElementById('cricT2Logo').src = TEAM_LOGOS[teams[2].toUpperCase()] || '';
+                }
+            } else {
+                document.getElementById('heroCricAPI').style.display = 'none';
+                document.getElementById('heroContent').style.display = 'block';
+                document.getElementById('heroTitle').innerText = slide.title;
+            }
+            currentHero++;
+        }
+
+        function heroWatchClicked() { 
+            if(activeHeroStatus === 'live' || activeHeroStatus === 'upcoming') openLangSelector(); 
+            else alert("Movie view isolated."); 
+        }
+        function heroClicked() { heroWatchClicked(); }
+
+        // External OTT Hub Launcher
+        function launchWebHub(url) {
+            window.location.href = url;
+        }
+
+        // Core AppCreator24 Movie Load Integration
+        function loadMovieInAppCreator(movieId) {
+            localStorage.setItem('kdk_target_movie_id', movieId);
+            window.location.href = 'go:KDKMOVIES';
+        }
+
+        // Top 10 List Builder
+        function buildTop10() {
+            const row = document.getElementById('top10Row');
+            row.innerHTML = '';
+            
+            let items = [];
+            items.push(...globalDynamicData.slice(0, 2));
+            items.push(...kdkMovieDatabase.slice(0, 8));
+            
+            items.forEach((item, index) => {
+                let badge = item.status === 'live' ? 'LIVE' : (item.quality || 'MOVIE');
+                let color = item.status === 'live' ? 'var(--primary-red)' : '#8a2be2';
+                
+                let action = (index < 2 || item.status === 'live') ? 'openLangSelector()' : `loadMovieInAppCreator(${item.id || index})`;
+                let img = item.poster || item.img;
+                
+                row.innerHTML += `
+                    <div class="top10-card focusable" tabindex="0" onclick="${action}" onkeydown="handleKey(event, function(){${action}})">
+                        <div class="rank-num">${index+1}</div>
+                        <div style="position:absolute; top:10px; right:10px; background:${color}; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:900; color:#fff; z-index: 10;">${badge}</div>
+                        <img src="${img}" onerror="this.src='https://via.placeholder.com/220x320/16181f/ffffff?text=Error'">
+                    </div>`;
+            });
+        }
+
+        // Continue Watching Builder
+        function buildContinueWatching() {
+            const row = document.getElementById('continueWatchingRow');
+            row.innerHTML = '';
+            // Selecting arbitrary movies to act as "Continue Watching" history
+            const historyItems = kdkMovieDatabase.slice(2, 7); 
+
+            historyItems.forEach((item, i) => {
+                let action = `loadMovieInAppCreator(${item.id})`;
+                let progress = Math.floor(Math.random() * 60) + 20; // Random progress 20%-80%
+                
+                // Using 16:9 placeholder if wide image is missing, else utilizing standard poster
+                let imgUrl = `https://via.placeholder.com/480x270/16181f/ffffff?text=${encodeURIComponent(item.title)}`;
+                
+                row.innerHTML += `
+                    <div class="continue-card focusable" tabindex="0" onclick="${action}" onkeydown="handleKey(event, function(){${action}})">
+                        <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/480x270/16181f/ffffff?text=Error'">
+                        <div class="continue-title">${item.title}</div>
+                        <div class="play-overlay"><i class="fa-solid fa-play"></i></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%;"></div></div>
+                    </div>`;
+            });
+        }
+
+        // New on KDK-Movies Builder
+        function buildNewMovies() {
+            const row = document.getElementById('newMoviesRow');
+            row.innerHTML = '';
+            // Reversing database to simulate "Newest"
+            const newItems = [...kdkMovieDatabase].reverse().slice(0, 10);
+
+            newItems.forEach(item => {
+                let action = `loadMovieInAppCreator(${item.id})`;
+                row.innerHTML += `
+                    <div class="standard-card focusable" tabindex="0" onclick="${action}" onkeydown="handleKey(event, function(){${action}})">
+                        <div style="position:absolute; top:8px; left:8px; background:var(--jio-blue); padding:3px 6px; border-radius:4px; font-size:10px; font-weight:900; color:#fff; z-index: 10;">NEW</div>
+                        <img src="${item.poster}" onerror="this.src='https://via.placeholder.com/220x320/16181f/ffffff?text=Error'">
+                    </div>`;
+            });
+        }
+
+        // Genres Builder
+        function buildGenres() {
+            const container = document.getElementById('genresContainer');
+            container.innerHTML = '';
+            const genres = ['Action & Adventure', 'Comedy Hits', 'Sci-Fi & Thriller', 'Drama & Romance'];
+
+            genres.forEach((genre, index) => {
+                // Shuffle array slightly per genre to simulate distinct lists
+                let genreItems = [...kdkMovieDatabase].sort(() => 0.5 - Math.random()).slice(0, 8);
+                
+                let genreHtml = `<div class="row-header">${genre}</div><div class="scroll-row">`;
+                
+                genreItems.forEach(item => {
+                    let action = `loadMovieInAppCreator(${item.id})`;
+                    genreHtml += `
+                        <div class="standard-card focusable" tabindex="0" onclick="${action}" onkeydown="handleKey(event, function(){${action}})">
+                            <img src="${item.poster}" onerror="this.src='https://via.placeholder.com/220x320/16181f/ffffff?text=Error'">
+                        </div>`;
+                });
+                
+                genreHtml += `</div>`;
+                container.innerHTML += genreHtml;
+            });
+        }
+
+        // Modals & Navigation intents
+        function openLangSelector() { 
+            const modal = document.getElementById('langModal');
+            modal.style.display = 'flex'; 
+            // Auto focus first button in modal
+            setTimeout(() => { modal.querySelector('.lang-btn').focus(); }, 100);
+        }
+        
+        function closeLangSelector() { 
+            document.getElementById('langModal').style.display = 'none'; 
+            document.getElementById('heroBanner').focus();
+        }
+        
+        function launchAppCreatorIntent(langCode) { 
+            window.location.href = `go:${langCode}`; 
+            closeLangSelector(); 
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape' || e.key === 'Backspace') {
+                if(document.getElementById('langModal').style.display === 'flex') { 
+                    closeLangSelector(); 
+                    return; 
+                }
+            }
+            if(e.key === 'Enter') {
+                // Ensure native enter clicks on focused elements
+                if(document.activeElement && document.activeElement.tagName !== 'DIV') {
+                    document.activeElement.click();
+                }
+            }
+        });
+
+        // Initialize Everything
+        document.addEventListener("DOMContentLoaded", bootSystem);
+    </script>
+</body>
+</html>
